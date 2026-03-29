@@ -3,8 +3,8 @@
 # ==============================================================================
 
 # --- Input / Output ---
-raw_data_dir: /path/to/raw/data
-output_dir: /path/to/preprocessed/output
+raw_data_dir: /projectnb/bucbi/hzj/Working_Folders/EPVS_Sample_New
+output_dir: /projectnb/bucbi/hzj/Working_Folders/EPVS_Sample_New/output
 subjects_list: subjects.txt          # One subject ID per line
 
 # --- Step 1: Reorientation ---
@@ -16,7 +16,6 @@ do_n4_correction: true
 # --- Step 3: ACPC Alignment ---
 do_acpc_alignment: true
 acpc_ref: $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz   # FSL's built-in MNI152 template
-acpc_script: external/HCPpipelines/PreFreeSurfer/scripts/ACPCAlignment.sh
 brainsize: 200
 
 # --- Step 4: Cropping ---

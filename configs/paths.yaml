@@ -9,7 +9,6 @@
 afni_dir: ""           # e.g., /share/pkg.8/afni/24.0/install
 fsl_dir: ""            # e.g., /share/pkg.8/fsl/6.0.7/install
 ants_dir: ""           # e.g., /share/pkg.8/ants/2.4.4/install
-hcp_dir: "external/HCPpipelines"   # Run utils/setup_hcp.sh to install
 
 # --- Data Paths ---
 epvs_data: /projectnb/bucbi/xda/EPVS_Sample_Data/Test

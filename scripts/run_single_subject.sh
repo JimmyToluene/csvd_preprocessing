@@ -60,7 +60,6 @@ parse_yaml() {
 
 RAW_DIR=$(parse_yaml "raw_data_dir")
 OUT_DIR=$(parse_yaml "output_dir")
-ACPC_SCRIPT=$(parse_yaml "acpc_script")
 ACPC_REF=$(parse_yaml "acpc_ref")
 ORIENTATION=$(parse_yaml "orientation")
 DO_N4=$(parse_yaml "do_n4_correction")
@@ -126,7 +125,7 @@ if [[ "${DO_ACPC}" == "true" ]]; then
     ACPC_MAT="${SUBJ_INT}/${SUBJECT}_acpc.mat"
     bash "${SCRIPT_DIR}/03_acpc_alignment.sh" \
         "${CURRENT}" "${ACPC_OUT}" "${ACPC_MAT}" \
-        "${ACPC_REF}" "${ACPC_SCRIPT}" "${BRAINSIZE}"
+        "${ACPC_REF}" "${BRAINSIZE}"
     CURRENT="${ACPC_OUT}.nii.gz"
 fi
 

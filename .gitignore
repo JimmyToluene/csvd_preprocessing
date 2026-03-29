@@ -8,8 +8,6 @@
 output/
 logs/
 
-# External dependencies (cloned via utils/setup_hcp.sh)
-external/
 
 # OS
 .DS_Store

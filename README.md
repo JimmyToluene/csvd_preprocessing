@@ -12,7 +12,7 @@ A standalone preprocessing pipeline for brain MRI data, designed for downstream 
 |------|--------|------|-----|-----|
 | 1 | `01_reorient.sh` | AFNI | Yes | Yes |
 | 2 | `02_n4_bias_correction.sh` | ANTs | Yes | Yes |
-| 3 | `03_acpc_alignment.sh` | HCP | Yes | — |
+| 3 | `03_acpc_alignment.sh` | FSL | Yes | — |
 | 4 | `04_crop.sh` | FSL | Yes | — |
 | 5 | `05_normalize.sh` | AFNI/FSL | Yes | Yes |
 | 6 | `06_coregister_t2.sh` | FSL | — | Yes |
@@ -21,28 +21,20 @@ A standalone preprocessing pipeline for brain MRI data, designed for downstream 
 
 - **AFNI** (3dresample, 3dcalc)
 - **ANTs** (N4BiasFieldCorrection)
-- **FSL** >= 6.0.6 (fslroi, fslstats, fslinfo, flirt, robustfov)
-- **HCP Pipelines** (ACPCAlignment.sh + supporting scripts)
-- **Connectome Workbench** (wb_command, needed by ACPCAlignment.sh)
+- **FSL** >= 6.0.4 (fslroi, fslstats, fslinfo, flirt, robustfov, aff2rigid, applywarp)
 
-### Setup HCP Pipelines
+### Load modules (BU SCC)
 
 ```bash
-# Clone HCP Pipelines into external/
-bash utils/setup_hcp.sh
-
-# Set environment variables before running the pipeline
-export HCPPIPEDIR=$(pwd)/external/HCPpipelines
-export CARET7DIR=$(dirname $(which wb_command))
-
-# On SCC:
-module load workbench
+module load fsl
+module load afni
+module load ants
 ```
 
 ### Check all dependencies
 
 ```bash
-bash utils/check_dependencies.sh --acpc-script external/HCPpipelines/PreFreeSurfer/scripts/ACPCAlignment.sh
+bash utils/check_dependencies.sh
 ```
 
 ## Quick Start
