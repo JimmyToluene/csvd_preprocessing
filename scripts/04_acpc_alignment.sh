@@ -1,12 +1,12 @@
 #!/bin/bash
 # ==============================================================================
-# Step 3: ACPC Alignment (FSL-only, no HCP/Workbench dependency)
+# Step 4: ACPC Alignment (FSL-only, no HCP/Workbench dependency)
 # ==============================================================================
 # Align to anterior-posterior commissure line using a reference image.
 # Replicates HCP's ACPCAlignment.sh using only FSL commands:
 #   robustfov → flirt (12 DOF) → aff2rigid (6 DOF) → applywarp (spline)
 #
-# Usage: bash 03_acpc_alignment.sh <input> <output> <omat> <ref> [brainsize]
+# Usage: bash 04_acpc_alignment.sh <input> <output> <omat> <ref> [brainsize]
 #   <input>        Bias-corrected T1w image
 #   <output>       ACPC-aligned image (without .nii.gz extension)
 #   <omat>         Output transformation matrix (6 DOF rigid)
@@ -32,13 +32,13 @@ if [[ ! -f "${REF}" ]]; then
     exit 1
 fi
 
-echo "  [Step 3] ACPC alignment: $(basename ${INPUT})"
+echo "  [Step 4] ACPC alignment: $(basename ${INPUT})"
 
 # Working directory for intermediate files
 WORKDIR=$(dirname "${OUTPUT}")/acpc_wdir
 mkdir -p "${WORKDIR}"
 
-# --- Step 3a: Crop FOV to remove neck/shoulders ---
+# --- Step 4a: Crop FOV to remove neck/shoulders ---
 echo "    Cropping FOV (brainsize=${BRAINSIZE})..."
 robustfov \
     -i "${INPUT}" \
@@ -49,7 +49,7 @@ robustfov \
 # Invert: full FOV → ROI
 convert_xfm -omat "${WORKDIR}/full2roi.mat" -inverse "${WORKDIR}/roi2full.mat"
 
-# --- Step 3b: Register cropped image to reference (12 DOF) ---
+# --- Step 4b: Register cropped image to reference (12 DOF) ---
 echo "    Registering to reference (12 DOF)..."
 flirt \
     -interp spline \
@@ -61,15 +61,15 @@ flirt \
     -searchry -30 30 \
     -searchrz -30 30
 
-# --- Step 3c: Concatenate matrices (full FOV → MNI, 12 DOF) ---
+# --- Step 4c: Concatenate matrices (full FOV → MNI, 12 DOF) ---
 echo "    Concatenating transforms..."
 convert_xfm -omat "${WORKDIR}/full2std.mat" -concat "${WORKDIR}/roi2std.mat" "${WORKDIR}/full2roi.mat"
 
-# --- Step 3d: Extract 6 DOF rigid component (the ACPC alignment) ---
+# --- Step 4d: Extract 6 DOF rigid component (the ACPC alignment) ---
 echo "    Extracting 6 DOF rigid transform..."
 aff2rigid "${WORKDIR}/full2std.mat" "${OMAT}"
 
-# --- Step 3e: Apply rigid transform with spline interpolation ---
+# --- Step 4e: Apply rigid transform with spline interpolation ---
 echo "    Applying ACPC transform..."
 applywarp \
     --rel \
@@ -79,4 +79,4 @@ applywarp \
     --premat="${OMAT}" \
     -o "${OUTPUT}"
 
-echo "  [Step 3] Done: $(basename ${OUTPUT}).nii.gz"
+echo "  [Step 4] Done: $(basename ${OUTPUT}).nii.gz"

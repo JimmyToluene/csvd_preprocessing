@@ -1,10 +1,10 @@
 #!/bin/bash
 # ==============================================================================
-# Step 6: T2→T1 Co-registration (Optional)
+# Step 7: T2→T1 Co-registration (Optional)
 # ==============================================================================
 # Rigid body registration of T2w to T1w space using FSL flirt.
 #
-# Usage: bash 06_coregister_t2.sh <t2_input> <t1_ref> <output> <omat> [dof]
+# Usage: bash 07_coregister_t2.sh <t2_input> <t1_ref> <output> <omat> [dof]
 #   <t2_input>  T2w image to register
 #   <t1_ref>    Preprocessed T1w image (reference)
 #   <output>    Registered T2w image
@@ -30,7 +30,7 @@ if [[ ! -f "${T1_REF}" ]]; then
     exit 1
 fi
 
-echo "  [Step 6] Co-registering T2→T1 (dof=${DOF}): $(basename ${T2_INPUT})"
+echo "  [Step 7] Co-registering T2→T1 (dof=${DOF}): $(basename ${T2_INPUT})"
 
 flirt \
     -dof "${DOF}" \
@@ -40,4 +40,4 @@ flirt \
     -out "${OUTPUT}" \
     -omat "${OMAT}"
 
-echo "  [Step 6] Done: $(basename ${OUTPUT})"
+echo "  [Step 7] Done: $(basename ${OUTPUT})"

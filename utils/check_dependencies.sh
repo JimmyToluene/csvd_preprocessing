@@ -40,6 +40,10 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 
+# FreeSurfer (SynthStrip)
+echo "--- FreeSurfer (SynthStrip) ---"
+check_cmd "mri_synthstrip" "FreeSurfer >= 7.3"
+
 # FSL
 echo "--- FSL ---"
 check_cmd "fslroi" "FSL"

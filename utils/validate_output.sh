@@ -70,7 +70,7 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 # Intermediate files
-for suffix in reorient n4 crop; do
+for suffix in reorient n4 brain brain_mask crop; do
     fpath="${SUBJ_DIR}/intermediate/${SUBJECT}_T1_${suffix}.nii.gz"
     if [[ -f "${fpath}" ]]; then
         echo "  OK   intermediate/${SUBJECT}_T1_${suffix}.nii.gz"

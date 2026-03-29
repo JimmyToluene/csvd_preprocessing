@@ -1,10 +1,10 @@
 #!/bin/bash
 # ==============================================================================
-# Step 4: Center-of-Mass Cropping
+# Step 5: Center-of-Mass Cropping
 # ==============================================================================
 # Crop to fixed dimensions centered on the volume center.
 #
-# Usage: bash 04_crop.sh <input> <output> [size_x size_y size_z]
+# Usage: bash 05_crop.sh <input> <output> [size_x size_y size_z]
 #   <input>   ACPC-aligned image
 #   <output>  Cropped image
 #   Default crop: 160x214x176
@@ -23,7 +23,7 @@ if [[ ! -f "${INPUT}" ]]; then
     exit 1
 fi
 
-echo "  [Step 4] Cropping to ${SIZE_X}x${SIZE_Y}x${SIZE_Z}: $(basename ${INPUT})"
+echo "  [Step 5] Cropping to ${SIZE_X}x${SIZE_Y}x${SIZE_Z}: $(basename ${INPUT})"
 
 # Get volume dimensions
 cx1=$(fslinfo "${INPUT}" | grep "^dim1" | awk '{print $2}')
@@ -55,4 +55,4 @@ echo "    Crop start: ${sx},${sy},${sz}, size: ${SIZE_X}x${SIZE_Y}x${SIZE_Z}"
 
 fslroi "${INPUT}" "${OUTPUT}" ${sx} ${SIZE_X} ${sy} ${SIZE_Y} ${sz} ${SIZE_Z}
 
-echo "  [Step 4] Done: $(basename ${OUTPUT})"
+echo "  [Step 5] Done: $(basename ${OUTPUT})"
