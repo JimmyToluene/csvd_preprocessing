@@ -1,0 +1,40 @@
+# ==============================================================================
+# CSVD Preprocessing Pipeline Configuration
+# ==============================================================================
+
+# --- Input / Output ---
+raw_data_dir: /path/to/raw/data
+output_dir: /path/to/preprocessed/output
+subjects_list: subjects.txt          # One subject ID per line
+
+# --- Step 1: Reorientation ---
+orientation: RAS
+
+# --- Step 2: N4 Bias Field Correction ---
+do_n4_correction: true
+
+# --- Step 3: ACPC Alignment ---
+do_acpc_alignment: true
+acpc_ref: $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz   # FSL's built-in MNI152 template
+acpc_script: external/HCPpipelines/PreFreeSurfer/scripts/ACPCAlignment.sh
+brainsize: 200
+
+# --- Step 4: Cropping ---
+crop_size: [160, 214, 176]           # Fixed output dimensions (x, y, z)
+crop_offsets: [80, 107, 88]          # Half-widths per axis
+
+# --- Step 5: Normalization ---
+# Options: max_norm, p1_p99, min_max
+norm_method: max_norm
+percentile_upper: 99
+percentile_lower: 0                  # Set to 1 for p1_p99 variant
+
+# --- Step 6: T2→T1 Co-registration (optional) ---
+do_t2_coregistration: true
+t2_dof: 6                           # Degrees of freedom for flirt (6 = rigid)
+
+# --- SGE Batch Processing ---
+n_parallel: 4
+gpu_required: false                  # Preprocessing is CPU-only
+sge_runtime: "01:00:00"
+sge_mem_per_core: "8G"

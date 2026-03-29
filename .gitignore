@@ -1,0 +1,38 @@
+# Data files
+*.nii
+*.nii.gz
+*.dcm
+*.mgz
+
+# Output directories
+output/
+logs/
+
+# External dependencies (cloned via utils/setup_hcp.sh)
+external/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+
+# SGE job files
+*.o[0-9]*
+*.e[0-9]*
+*.po[0-9]*
+*.pe[0-9]*
+
+# Temp files
+*.tmp
+*.bak
