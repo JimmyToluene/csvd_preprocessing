@@ -19,6 +19,9 @@
 
 set -euo pipefail
 
+# --- Auto-load required modules ---
+source utils/load_modules.sh
+
 # --- Configuration ---
 CONFIG="configs/preprocess_config.yaml"
 SUBJECTS_LIST="subjects.txt"
