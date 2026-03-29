@@ -41,8 +41,9 @@ else
 fi
 
 # FreeSurfer (SynthStrip)
-echo "--- FreeSurfer (SynthStrip) ---"
-check_cmd "mri_synthstrip" "FreeSurfer >= 7.3"
+echo "--- FreeSurfer ---"
+check_cmd "mri_synthstrip" "FreeSurfer >= 7.3 (SynthStrip)"
+check_cmd "mri_watershed" "FreeSurfer (watershed fallback)"
 
 # FSL
 echo "--- FSL ---"

@@ -18,20 +18,22 @@ do_acpc_alignment: true
 acpc_ref: $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz   # FSL's built-in MNI152 template
 brainsize: 200
 
-# --- Step 4: Skull Stripping (Brain Extraction) ---
-do_skull_strip: true
-
-# --- Step 5: Cropping ---
+# --- Step 4: Cropping ---
 crop_size: [160, 214, 176]           # Fixed output dimensions (x, y, z)
 crop_offsets: [80, 107, 88]          # Half-widths per axis
 
-# --- Step 6: Normalization ---
-# Options: max_norm, p1_p99, min_max
-norm_method: max_norm
+# --- Step 4b: Skull Stripping (Brain Extraction) ---
+skull_strip: true
+skull_strip_tool: synthstrip          # Options: synthstrip, watershed
+apply_brain_mask: true                # Multiply final output by brain mask to zero out non-brain
+
+# --- Step 5: Normalization ---
+# Options: min_max_masked, max_norm, p1_p99, min_max
+norm_method: min_max_masked
 percentile_upper: 99
 percentile_lower: 0                  # Set to 1 for p1_p99 variant
 
-# --- Step 7: T2→T1 Co-registration (optional) ---
+# --- Step 6: T2→T1 Co-registration (optional) ---
 do_t2_coregistration: true
 t2_dof: 6                           # Degrees of freedom for flirt (6 = rigid)
 

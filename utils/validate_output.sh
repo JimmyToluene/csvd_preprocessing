@@ -70,7 +70,7 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 # Intermediate files
-for suffix in reorient n4 brain brain_mask crop; do
+for suffix in reorient n4 crop; do
     fpath="${SUBJ_DIR}/intermediate/${SUBJECT}_T1_${suffix}.nii.gz"
     if [[ -f "${fpath}" ]]; then
         echo "  OK   intermediate/${SUBJECT}_T1_${suffix}.nii.gz"
@@ -79,6 +79,24 @@ for suffix in reorient n4 brain brain_mask crop; do
         ERRORS=$((ERRORS + 1))
     fi
 done
+
+# --- Brain mask existence ---
+echo ""
+echo "--- Brain mask ---"
+BRAIN_MASK="${SUBJ_DIR}/T1w_brain_mask.nii.gz"
+BRAIN_IMG="${SUBJ_DIR}/T1w_brain.nii.gz"
+if [[ -f "${BRAIN_MASK}" ]]; then
+    echo "  OK   T1w_brain_mask.nii.gz"
+else
+    echo "  FAIL T1w_brain_mask.nii.gz — MISSING"
+    ERRORS=$((ERRORS + 1))
+fi
+if [[ -f "${BRAIN_IMG}" ]]; then
+    echo "  OK   T1w_brain.nii.gz"
+else
+    echo "  FAIL T1w_brain.nii.gz — MISSING"
+    ERRORS=$((ERRORS + 1))
+fi
 
 # --- T2w file existence (optional) ---
 echo ""
@@ -148,6 +166,28 @@ if [[ -f "${T2_NORM_FILE}" ]]; then
     echo ""
     echo "--- T2w normalization range (expected: ~[0, 1]) ---"
     check_norm "${T2_NORM_FILE}" "T2w"
+fi
+
+# --- Brain mask leakage check ---
+echo ""
+echo "--- Brain mask leakage check (no non-zero voxels outside mask) ---"
+if [[ -f "${BRAIN_MASK}" ]]; then
+    for NORM_FILE in "${SUBJ_DIR}/${SUBJECT}_T1_norm.nii.gz" "${SUBJ_DIR}/${SUBJECT}_T2_norm.nii.gz"; do
+        if [[ -f "${NORM_FILE}" ]]; then
+            LABEL=$(basename "${NORM_FILE}" .nii.gz)
+            # Invert mask and check max of normalized * inverted_mask
+            OUTSIDE_MAX=$(fslstats "${NORM_FILE}" -k <(fslmaths "${BRAIN_MASK}" -binv -) -R 2>/dev/null | awk '{print $2}' || echo "0")
+            OUTSIDE_OK=$(echo "${OUTSIDE_MAX} < 0.001" | bc -l 2>/dev/null || echo "1")
+            if [[ "${OUTSIDE_OK}" -eq 1 ]]; then
+                echo "  OK   ${LABEL}: no signal outside brain mask"
+            else
+                echo "  WARN ${LABEL}: max outside mask = ${OUTSIDE_MAX}"
+                WARNINGS=$((WARNINGS + 1))
+            fi
+        fi
+    done
+else
+    echo "  SKIP Brain mask not found, skipping leakage check"
 fi
 
 # --- Summary ---

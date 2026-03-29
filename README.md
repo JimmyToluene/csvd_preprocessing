@@ -20,12 +20,13 @@
 
 ```
                             T1w Flow
-  ┌─────────┐   ┌─────┐   ┌──────┐   ┌──────────────┐   ┌──────┐   ┌───────────┐
-  │ Reorient ├──►│ N4  ├──►│ ACPC ├──►│ Skull Strip  ├──►│ Crop ├──►│ Normalize │
-  │  (AFNI)  │   │(ANTs)│  │(FSL) │   │ (SynthStrip) │   │(FSL) │   │(AFNI/FSL) │
-  └─────────┘   └─────┘   └──────┘   └──────┬───────┘   └──────┘   └─────┬─────┘
-                                              │                            │
-                                        brain mask ── cropped ────► masked percentiles
+  ┌─────────┐   ┌─────┐   ┌──────┐   ┌──────┐   ┌──────────────┐   ┌───────────┐
+  │ Reorient ├──►│ N4  ├──►│ ACPC ├──►│ Crop ├──►│ Skull Strip  ├──►│ Normalize │
+  │  (AFNI)  │   │(ANTs)│  │(FSL) │   │(FSL) │   │ (SynthStrip) │   │(AFNI/FSL) │
+  └─────────┘   └─────┘   └──────┘   └──────┘   └──────┬───────┘   └─────┬─────┘
+                                                         │                 │
+                                                   brain mask ────► masked stats
+                                                                    + zero non-brain
 ```
 
 ```
@@ -33,9 +34,9 @@
   ┌─────────┐   ┌─────┐   ┌────────────────┐   ┌───────────┐
   │ Reorient ├──►│ N4  ├──►│ Co-register    ├──►│ Normalize │
   │  (AFNI)  │   │(ANTs)│  │ T2→T1w (FSL)  │   │(AFNI/FSL) │
-  └─────────┘   └─────┘   └────────────────┘   └─────┬─────┘
-                                                      │
-                                              uses T1w brain mask
+  └─────────┘   └─────┘   └───────┬────────┘   └─────┬─────┘
+                                   │                   │
+                            T1w brain mask ──► applied to both steps
 ```
 
 ### Pipeline Steps
@@ -44,11 +45,11 @@
 |:----:|--------|------|-------------|:---:|:---:|
 | 1 | `01_reorient.sh` | AFNI | Reorient to RAS standard orientation | + | + |
 | 2 | `02_n4_bias_correction.sh` | ANTs | N4 bias field correction | + | + |
-| 3 | `04_acpc_alignment.sh` | FSL | ACPC alignment to MNI152 space | + | |
-| 4 | `03_skull_strip.sh` | FreeSurfer | Brain extraction via SynthStrip | + | |
-| 5 | `05_crop.sh` | FSL | Center-of-mass crop to 160x214x176 | + | |
-| 6 | `06_normalize.sh` | AFNI/FSL | Intensity normalization to [0, 1] | + | + |
-| 7 | `07_coregister_t2.sh` | FSL | Rigid registration of T2w to T1w space | | + |
+| 3 | `03_acpc_alignment.sh` | FSL | ACPC alignment to MNI152 space | + | |
+| 4 | `04_crop.sh` | FSL | Center-of-mass crop to 160x214x176 | + | |
+| 4b | `04b_skull_strip.sh` | FreeSurfer | Brain mask via SynthStrip (on cropped T1w) | + | |
+| 5 | `05_normalize.sh` | AFNI/FSL | Brain-masked intensity normalization to [0, 1] | + | + |
+| 6 | `06_coregister_t2.sh` | FSL | Rigid registration of T2w to T1w crop space | | + |
 
 Each step is toggleable via the config file. All steps produce intermediate outputs for inspection.
 
@@ -62,13 +63,13 @@ Each step is toggleable via the config file. All steps produce intermediate outp
 
 <!-- Add screenshots after running the pipeline. Suggested fsleyes captures: -->
 
-| Raw | After N4 | Skull Stripped | ACPC Aligned | Cropped | Normalized |
-|:---:|:--------:|:-------------:|:------------:|:-------:|:----------:|
-| ![raw](docs/figures/t1_raw.png) | ![n4](docs/figures/t1_n4.png) | ![brain](docs/figures/t1_brain.png) | ![acpc](docs/figures/t1_acpc.png) | ![crop](docs/figures/t1_crop.png) | ![norm](docs/figures/t1_norm.png) |
+| Raw | After N4 | ACPC Aligned | Cropped | Brain Mask | Normalized |
+|:---:|:--------:|:------------:|:-------:|:----------:|:----------:|
+| ![raw](docs/figures/t1_raw.png) | ![n4](docs/figures/t1_n4.png) | ![acpc](docs/figures/t1_acpc.png) | ![crop](docs/figures/t1_crop.png) | ![mask](docs/figures/t1_brain_mask.png) | ![norm](docs/figures/t1_norm.png) |
 
 ### Brain Mask Overlay
 
-<!-- Overlay brain mask on the original T1w to verify extraction quality -->
+<!-- Overlay brain mask on the cropped T1w to verify extraction quality -->
 
 | Axial | Sagittal | Coronal |
 |:-----:|:--------:|:-------:|
@@ -90,25 +91,25 @@ Each step is toggleable via the config file. All steps produce intermediate outp
 qrsh -l h_rt=00:30:00
 module load fsl
 
-SUBJ=sub-001
+SUBJ=1001
 OUT=output/${SUBJ}
 INT=${OUT}/intermediate
 
 # --- T1w progression (sagittal mid-slice screenshots) ---
 for img in ${INT}/${SUBJ}_T1_reorient ${INT}/${SUBJ}_T1_n4 \
-           ${INT}/${SUBJ}_T1_brain ${INT}/${SUBJ}_T1_acpc \
-           ${INT}/${SUBJ}_T1_crop ${OUT}/${SUBJ}_T1_norm; do
+           ${INT}/${SUBJ}_T1_acpc ${INT}/${SUBJ}_T1_crop \
+           ${OUT}/T1w_brain ${OUT}/${SUBJ}_T1_norm; do
     fsleyes render --outfile docs/figures/$(basename ${img}).png \
         --size 800 600 --scene ortho --displaySpace ${img}.nii.gz \
         ${img}.nii.gz --cmap greyscale
 done
 
-# --- Brain mask overlay ---
+# --- Brain mask overlay on cropped T1w ---
 for plane in axial sagittal coronal; do
     fsleyes render --outfile docs/figures/mask_${plane}.png \
         --size 800 600 --scene ortho --${plane} \
-        ${INT}/${SUBJ}_T1_n4.nii.gz --cmap greyscale \
-        ${INT}/${SUBJ}_T1_brain_mask.nii.gz --cmap red --alpha 40
+        ${INT}/${SUBJ}_T1_crop.nii.gz --cmap greyscale \
+        ${OUT}/T1w_brain_mask.nii.gz --cmap red --alpha 40
 done
 
 # --- T2 co-registration comparison ---
@@ -133,7 +134,7 @@ fsleyes render --outfile docs/figures/t2_after_coreg.png \
 ```bash
 bash scripts/run_single_subject.sh \
     --config configs/preprocess_config.yaml \
-    --subject sub-001
+    --subject 1001
 ```
 
 ### Batch processing (SGE)
@@ -152,7 +153,7 @@ qsub scripts/run_batch.sh
 |------|---------|---------------|
 | **AFNI** | any | `3dresample`, `3dcalc` |
 | **ANTs** | any | `N4BiasFieldCorrection` |
-| **FreeSurfer** | >= 7.3 | `mri_synthstrip` |
+| **FreeSurfer** | >= 7.3 | `mri_synthstrip` (or `mri_watershed` as fallback) |
 | **FSL** | >= 6.0.4 | `fslroi`, `fslstats`, `fslinfo`, `flirt`, `robustfov`, `aff2rigid`, `applywarp` |
 
 ### Load modules (BU SCC)
@@ -163,6 +164,8 @@ module load afni
 module load ants
 module load freesurfer
 ```
+
+Modules are auto-loaded by the pipeline if missing.
 
 ### Verify installation
 
@@ -179,12 +182,14 @@ All parameters are in `configs/preprocess_config.yaml`:
 ```yaml
 # Toggle steps on/off
 do_n4_correction: true
-do_skull_strip: true          # SynthStrip brain extraction
 do_acpc_alignment: true
+skull_strip: true
+skull_strip_tool: synthstrip        # synthstrip | watershed
+apply_brain_mask: true              # Zero out non-brain in final output
 do_t2_coregistration: true
 
 # Normalization
-norm_method: max_norm         # max_norm | p1_p99 | min_max
+norm_method: min_max_masked         # min_max_masked | max_norm | p1_p99 | min_max
 
 # Crop dimensions
 crop_size: [160, 214, 176]
@@ -194,24 +199,26 @@ crop_size: [160, 214, 176]
 
 | Variant | Formula | Convention |
 |---------|---------|------------|
+| `min_max_masked` | (I - min_brain) / (max_brain - min_brain), clip [0,1], mask | Default |
 | `max_norm` | I / P99, clip [0,1] | SHIVA |
 | `p1_p99` | (I - P1) / (P99 - P1), clip [0,1] | MUJICA |
 | `min_max` | (I - min) / (max - min), clip [0,1] | Standard ML |
 
-When skull stripping is enabled, percentiles are computed **within the brain mask only** — matching the [SHiVAi](https://github.com/pboutinaud/SHiVAi) convention and avoiding intensity skew from skull/scalp voxels.
+When a brain mask is available, **all** methods compute statistics within the mask only. If `apply_brain_mask: true`, non-brain voxels are zeroed in the final output.
 
 ---
 
 ## Skull Stripping
 
-Step 3 uses [SynthStrip](https://surfer.nmr.mgh.harvard.edu/docs/synthstrip/) for brain extraction:
+Step 4b uses [SynthStrip](https://surfer.nmr.mgh.harvard.edu/docs/synthstrip/) on the **cropped** T1w image (after ACPC alignment and cropping):
 
-- Robust across scanners, contrasts, and pathology (trained on synthetic data)
-- Produces a **binary brain mask** that is carried through ACPC alignment and cropping
-- The mask is used downstream for **brain-masked intensity normalization**
-- Fast (~15-30s per subject), no parameter tuning required
+- Runs after crop so ACPC alignment has the full skull for accurate registration to MNI152
+- Produces a **binary brain mask** and skull-stripped brain as separate outputs
+- The brain mask is reused for T2w (since T2w is co-registered to T1w crop space)
+- The mask drives both normalization (brain-only percentiles) and output masking (zero non-brain)
+- Fallback to `mri_watershed` if SynthStrip is unavailable
 
-Disable with `do_skull_strip: false` — the pipeline falls back to whole-volume normalization.
+Disable with `skull_strip: false` — the pipeline falls back to whole-volume stats with no masking.
 
 ---
 
@@ -219,22 +226,18 @@ Disable with `do_skull_strip: false` — the pipeline falls back to whole-volume
 
 ```
 output/<subject>/
-├── <subject>_T1_norm.nii.gz                    # Final T1w
-├── <subject>_T2_norm.nii.gz                    # Final T2w (if enabled)
+├── <subject>_T1_norm.nii.gz          # Final T1w (normalized, brain-masked)
+├── <subject>_T2_norm.nii.gz          # Final T2w (if enabled)
+├── T1w_brain.nii.gz                  # Skull-stripped brain
+├── T1w_brain_mask.nii.gz             # Binary brain mask (reused for T2w)
 └── intermediate/
     ├── <subject>_T1_reorient.nii.gz
     ├── <subject>_T1_n4.nii.gz
-    ├── <subject>_T1_brain.nii.gz               # Skull-stripped brain
-    ├── <subject>_T1_brain_mask.nii.gz          # Binary brain mask
-    ├── <subject>_T1_brain_mask_acpc.nii.gz     # Brain mask in ACPC space
-    ├── <subject>_T1_brain_mask_crop.nii.gz     # Brain mask cropped
     ├── <subject>_T1_acpc.nii.gz
     ├── <subject>_T1_crop.nii.gz
     ├── <subject>_acpc.mat
     ├── <subject>_T2_reorient.nii.gz
     ├── <subject>_T2_n4.nii.gz
-    ├── <subject>_T2_brain.nii.gz
-    ├── <subject>_T2_brain_mask.nii.gz
     ├── <subject>_T2_coreg.nii.gz
     └── <subject>_T2_coreg.mat
 ```
@@ -244,15 +247,17 @@ output/<subject>/
 ## QC Validation
 
 ```bash
-bash utils/validate_output.sh /path/to/output/sub-001 sub-001
+bash utils/validate_output.sh /path/to/output/1001 1001
 ```
 
 **Checks performed:**
 - File existence — all intermediate and final outputs (T1w + T2w)
+- Brain mask existence — `T1w_brain.nii.gz` and `T1w_brain_mask.nii.gz`
 - Crop dimensions — match expected 160x214x176
 - T2w co-registration dimensions — match T1w crop
 - Intensity range — within [0, 1] after normalization
 - Data integrity — no NaN or Inf values
+- Brain mask leakage — no non-zero voxels outside brain mask in final outputs
 
 ---
 
@@ -265,15 +270,16 @@ csvd_preprocessing/
 ├── scripts/
 │   ├── 01_reorient.sh              # Step 1: RAS reorientation
 │   ├── 02_n4_bias_correction.sh    # Step 2: N4 bias correction
-│   ├── 03_skull_strip.sh           # Step 3: SynthStrip brain extraction
-│   ├── 04_acpc_alignment.sh        # Step 4: ACPC alignment
-│   ├── 05_crop.sh                  # Step 5: Center-of-mass crop
-│   ├── 06_normalize.sh             # Step 6: Intensity normalization
-│   ├── 07_coregister_t2.sh         # Step 7: T2→T1 co-registration
+│   ├── 03_acpc_alignment.sh        # Step 3: ACPC alignment
+│   ├── 04_crop.sh                  # Step 4: Center-of-mass crop
+│   ├── 04b_skull_strip.sh          # Step 4b: SynthStrip brain extraction
+│   ├── 05_normalize.sh             # Step 5: Brain-masked normalization
+│   ├── 06_coregister_t2.sh         # Step 6: T2→T1 co-registration
 │   ├── run_single_subject.sh       # Run full pipeline on one subject
 │   └── run_batch.sh                # SGE batch submission
 ├── utils/
 │   ├── check_dependencies.sh       # Verify all tools are installed
+│   ├── load_modules.sh             # Auto-load SCC modules
 │   └── validate_output.sh          # QC checks on processed data
 ├── subjects.txt                    # Subject IDs (one per line)
 └── README.md

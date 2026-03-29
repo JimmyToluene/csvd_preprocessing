@@ -4,23 +4,23 @@
 # ==============================================================================
 # Usage: bash run_single_subject.sh --config <config.yaml> --subject <subject_id>
 #
-# T1w flow: reorient → N4 → ACPC → skull strip → crop → normalize
-# T2w flow: reorient → N4 → co-register to T1w → skull strip → normalize
+# T1w flow: reorient → N4 → ACPC → crop → skull_strip → normalize
+# T2w flow: reorient → N4 → co-register to T1w → normalize (using T1w brain mask)
 #
 # Output structure:
 #   <output_dir>/<subject>/
-#     ├── T1_norm.nii.gz          ← final T1w
-#     ├── T2_norm.nii.gz          ← final T2w (if enabled)
+#     ├── <subject>_T1_norm.nii.gz        ← final T1w
+#     ├── <subject>_T2_norm.nii.gz        ← final T2w (if enabled)
+#     ├── T1w_brain.nii.gz                ← skull-stripped brain
+#     ├── T1w_brain_mask.nii.gz           ← binary brain mask (reused for T2w)
 #     └── intermediate/
-#         ├── T1_reorient.nii.gz
-#         ├── T1_n4.nii.gz
-#         ├── T1_acpc.nii.gz
-#         ├── T1_brain.nii.gz
-#         ├── T1_brain_mask.nii.gz
-#         ├── T1_crop.nii.gz
-#         ├── T2_reorient.nii.gz
-#         ├── T2_n4.nii.gz
-#         └── T2_coreg.nii.gz
+#         ├── <subject>_T1_reorient.nii.gz
+#         ├── <subject>_T1_n4.nii.gz
+#         ├── <subject>_T1_acpc.nii.gz
+#         ├── <subject>_T1_crop.nii.gz
+#         ├── <subject>_T2_reorient.nii.gz
+#         ├── <subject>_T2_n4.nii.gz
+#         └── <subject>_T2_coreg.nii.gz
 # ==============================================================================
 
 set -euo pipefail
@@ -71,9 +71,11 @@ OUT_DIR=$(parse_yaml "output_dir")
 ACPC_REF=$(parse_yaml "acpc_ref")
 ORIENTATION=$(parse_yaml "orientation")
 DO_N4=$(parse_yaml "do_n4_correction")
-DO_SKULL_STRIP=$(parse_yaml "do_skull_strip")
 DO_ACPC=$(parse_yaml "do_acpc_alignment")
 BRAINSIZE=$(parse_yaml "brainsize")
+DO_SKULL_STRIP=$(parse_yaml "skull_strip")
+SKULL_STRIP_TOOL=$(parse_yaml "skull_strip_tool")
+APPLY_BRAIN_MASK=$(parse_yaml "apply_brain_mask")
 NORM_METHOD=$(parse_yaml "norm_method")
 DO_T2=$(parse_yaml "do_t2_coregistration")
 T2_DOF=$(parse_yaml "t2_dof")
@@ -109,7 +111,7 @@ fi
 echo "  Found T1w: $(basename ${T1_RAW})"
 
 # ============================================================================
-# T1w Pipeline: reorient → N4 → ACPC → skull strip → crop → normalize
+# T1w Pipeline: reorient → N4 → ACPC → crop → skull_strip → normalize
 # ============================================================================
 echo ""
 echo "--- T1w Processing ---"
@@ -129,47 +131,41 @@ if [[ "${DO_N4}" == "true" ]]; then
     CURRENT="${N4_OUT}"
 fi
 
-# Step 3: ACPC Alignment (before skull strip — flirt needs skull for MNI152 registration)
+# Step 3: ACPC Alignment
 if [[ "${DO_ACPC}" == "true" ]]; then
     ACPC_OUT="${SUBJ_INT}/${SUBJECT}_T1_acpc"
     ACPC_MAT="${SUBJ_INT}/${SUBJECT}_acpc.mat"
-    bash "${SCRIPT_DIR}/04_acpc_alignment.sh" \
+    bash "${SCRIPT_DIR}/03_acpc_alignment.sh" \
         "${CURRENT}" "${ACPC_OUT}" "${ACPC_MAT}" \
         "${ACPC_REF}" "${BRAINSIZE}"
     CURRENT="${ACPC_OUT}.nii.gz"
 fi
 
-# Step 4: Skull Stripping (after ACPC — mask is already in aligned space)
-if [[ "${DO_SKULL_STRIP}" == "true" ]]; then
-    BRAIN_OUT="${SUBJ_INT}/${SUBJECT}_T1_brain.nii.gz"
-    T1_BRAIN_MASK="${SUBJ_INT}/${SUBJECT}_T1_brain_mask.nii.gz"
-    bash "${SCRIPT_DIR}/03_skull_strip.sh" "${CURRENT}" "${BRAIN_OUT}" "${T1_BRAIN_MASK}"
-    CURRENT="${BRAIN_OUT}"
-fi
-
-# Step 5: Cropping
+# Step 4: Cropping
 CROP_OUT="${SUBJ_INT}/${SUBJECT}_T1_crop.nii.gz"
-bash "${SCRIPT_DIR}/05_crop.sh" "${CURRENT}" "${CROP_OUT}" ${CROP_X} ${CROP_Y} ${CROP_Z}
+bash "${SCRIPT_DIR}/04_crop.sh" "${CURRENT}" "${CROP_OUT}" ${CROP_X} ${CROP_Y} ${CROP_Z}
 CURRENT="${CROP_OUT}"
 
-# Crop brain mask with the same parameters so it stays aligned
-if [[ -n "${T1_BRAIN_MASK}" && -f "${T1_BRAIN_MASK}" ]]; then
-    MASK_CROP="${SUBJ_INT}/${SUBJECT}_T1_brain_mask_crop.nii.gz"
-    bash "${SCRIPT_DIR}/05_crop.sh" "${T1_BRAIN_MASK}" "${MASK_CROP}" ${CROP_X} ${CROP_Y} ${CROP_Z}
-    T1_BRAIN_MASK="${MASK_CROP}"
+# Step 4b: Skull Stripping (on the cropped T1w)
+# Produces brain mask for normalization; the main pipeline continues with CROP_OUT
+if [[ "${DO_SKULL_STRIP}" == "true" ]]; then
+    T1_BRAIN="${SUBJ_OUT}/T1w_brain.nii.gz"
+    T1_BRAIN_MASK="${SUBJ_OUT}/T1w_brain_mask.nii.gz"
+    bash "${SCRIPT_DIR}/04b_skull_strip.sh" \
+        "${CROP_OUT}" "${T1_BRAIN}" "${T1_BRAIN_MASK}" "${SKULL_STRIP_TOOL}"
 fi
 
-# Step 6: Normalization → final output (use brain mask if available)
+# Step 5: Normalization → final output
 T1_NORM_OUT="${SUBJ_OUT}/${SUBJECT}_T1_norm.nii.gz"
-bash "${SCRIPT_DIR}/06_normalize.sh" "${CURRENT}" "${T1_NORM_OUT}" "${NORM_METHOD}" "${T1_BRAIN_MASK}"
+bash "${SCRIPT_DIR}/05_normalize.sh" \
+    "${CURRENT}" "${T1_NORM_OUT}" "${NORM_METHOD}" "${T1_BRAIN_MASK}" "${APPLY_BRAIN_MASK}"
 
 T1_FINAL="${T1_NORM_OUT}"
 echo "  T1w final: $(basename ${T1_FINAL})"
 
 # ============================================================================
 # T2w Pipeline: reorient → N4 → co-register to T1w → normalize
-# (skull stripping not needed — T2 is coregistered to skull-stripped T1w crop,
-#  and normalization uses the T1w brain mask)
+# Uses the T1w brain mask (T2w is now in T1w crop space after co-registration)
 # ============================================================================
 if [[ "${DO_T2}" == "true" ]]; then
     T2_RAW=$(find "${SUBJ_RAW}" -name "*T2*" -name "*.nii.gz" | head -1)
@@ -193,16 +189,18 @@ if [[ "${DO_T2}" == "true" ]]; then
             T2_CURRENT="${T2_N4}"
         fi
 
-        # Step 7: Co-register T2w → T1w (reference = T1w crop, before normalization)
+        # Step 6: Co-register T2w → T1w crop space (+ apply brain mask)
         T2_COREG="${SUBJ_INT}/${SUBJECT}_T2_coreg.nii.gz"
         T2_MAT="${SUBJ_INT}/${SUBJECT}_T2_coreg.mat"
-        bash "${SCRIPT_DIR}/07_coregister_t2.sh" \
-            "${T2_CURRENT}" "${CROP_OUT}" "${T2_COREG}" "${T2_MAT}" "${T2_DOF}"
+        bash "${SCRIPT_DIR}/06_coregister_t2.sh" \
+            "${T2_CURRENT}" "${CROP_OUT}" "${T2_COREG}" "${T2_MAT}" \
+            "${T2_DOF}" "${T1_BRAIN_MASK}"
         T2_CURRENT="${T2_COREG}"
 
-        # Step 6: Normalization → final output (use T1w brain mask in crop space)
+        # Step 5: Normalization → final output (using T1w brain mask)
         T2_NORM="${SUBJ_OUT}/${SUBJECT}_T2_norm.nii.gz"
-        bash "${SCRIPT_DIR}/06_normalize.sh" "${T2_CURRENT}" "${T2_NORM}" "${NORM_METHOD}" "${T1_BRAIN_MASK}"
+        bash "${SCRIPT_DIR}/05_normalize.sh" \
+            "${T2_CURRENT}" "${T2_NORM}" "${NORM_METHOD}" "${T1_BRAIN_MASK}" "${APPLY_BRAIN_MASK}"
 
         T2_FINAL="${T2_NORM}"
         echo "  T2w final: $(basename ${T2_FINAL})"
