@@ -72,7 +72,7 @@ Edit `configs/preprocess_config.yaml` to set:
 
 | Variant | Formula | Used by |
 |---------|---------|---------|
-| `max_norm` | I / P99, clip [0,1] | Xiao Da / SHIVA |
+| `max_norm` | I / P99, clip [0,1] | SHIVA |
 | `p1_p99` | (I - P1) / (P99 - P1), clip [0,1] | MUJICA |
 | `min_max` | (I - min) / (max - min), clip [0,1] | Standard ML |
 
