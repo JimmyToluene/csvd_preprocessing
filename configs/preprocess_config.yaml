@@ -13,13 +13,13 @@ orientation: RAS
 # --- Step 2: N4 Bias Field Correction ---
 do_n4_correction: true
 
-# --- Step 3: Skull Stripping (Brain Extraction) ---
-do_skull_strip: true
-
-# --- Step 4: ACPC Alignment ---
+# --- Step 3: ACPC Alignment ---
 do_acpc_alignment: true
 acpc_ref: $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz   # FSL's built-in MNI152 template
 brainsize: 200
+
+# --- Step 4: Skull Stripping (Brain Extraction) ---
+do_skull_strip: true
 
 # --- Step 5: Cropping ---
 crop_size: [160, 214, 176]           # Fixed output dimensions (x, y, z)
