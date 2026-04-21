@@ -35,33 +35,6 @@ Each step is toggleable via the config file. All steps produce intermediate outp
 
 > **Placeholder** — replace with actual outputs after running on SCC.
 
-### T1w Preprocessing Progression
-
-<!-- Add screenshots after running the pipeline. Suggested fsleyes captures: -->
-
-| Raw | After N4 | ACPC Aligned | Cropped | Brain Mask | Normalized |
-|:---:|:--------:|:------------:|:-------:|:----------:|:----------:|
-| ![raw](docs/figures/t1_raw.png) | ![n4](docs/figures/t1_n4.png) | ![acpc](docs/figures/t1_acpc.png) | ![crop](docs/figures/t1_crop.png) | ![mask](docs/figures/t1_brain_mask.png) | ![norm](docs/figures/t1_norm.png) |
-
-### Brain Mask Overlay
-
-<!-- Overlay brain mask on the cropped T1w to verify extraction quality -->
-
-| Axial | Sagittal | Coronal |
-|:-----:|:--------:|:-------:|
-| ![ax](docs/figures/mask_axial.png) | ![sag](docs/figures/mask_sagittal.png) | ![cor](docs/figures/mask_coronal.png) |
-
-### T2w Co-registration
-
-<!-- Show T2w before and after co-registration, overlaid on T1w -->
-
-| T2w Before Coreg | T2w After Coreg (on T1w) |
-|:-----------------:|:------------------------:|
-| ![before](docs/figures/t2_before_coreg.png) | ![after](docs/figures/t2_after_coreg.png) |
-
-<details>
-<summary><b>How to generate these figures on SCC</b></summary>
-
 ```bash
 # Request an interactive session with display forwarding
 qrsh -l h_rt=00:30:00
