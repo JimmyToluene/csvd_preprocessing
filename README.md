@@ -15,6 +15,12 @@
 </p>
 
 
+![Preprocessing pipeline overview](docs/figures/pipeline_overview.png)
+
+> T1w and T2w share preprocessing (steps 1–2), then diverge: T1w goes through ACPC alignment, cropping, and skull stripping; T2w is rigidly registered into the cropped T1w space and reuses the T1w brain mask. Step 5 normalizes both modalities within the brain mask.
+
+---
+
 ### Pipeline Steps
 
 | Step | Script | Tool | Description | T1w | T2w |
@@ -28,14 +34,6 @@
 | 6 | `06_coregister_t2.sh` | FSL | Rigid registration of T2w to T1w crop space | | + |
 
 Each step is toggleable via the config file. All steps produce intermediate outputs for inspection.
-
-### Pipeline Diagram
-
-![Preprocessing pipeline overview](docs/figures/pipeline_overview.png)
-
-> T1w and T2w share preprocessing (steps 1–2), then diverge: T1w goes through ACPC alignment, cropping, and skull stripping; T2w is rigidly registered into the cropped T1w space and reuses the T1w brain mask. Step 5 normalizes both modalities within the brain mask.
-
----
 
 ## Visual Results
 
