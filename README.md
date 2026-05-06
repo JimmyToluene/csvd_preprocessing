@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> &bull;
-  <a href="#pipeline-overview">Pipeline</a> &bull;
+  <a href="#pipeline-steps">Pipeline</a> &bull;
   <a href="#configuration">Config</a> &bull;
   <a href="#requirements">Requirements</a> &bull;
   <a href="#qc-validation">QC</a>
@@ -28,6 +28,12 @@
 | 6 | `06_coregister_t2.sh` | FSL | Rigid registration of T2w to T1w crop space | | + |
 
 Each step is toggleable via the config file. All steps produce intermediate outputs for inspection.
+
+### Pipeline Diagram
+
+![Preprocessing pipeline overview](docs/figures/pipeline_overview.png)
+
+> T1w and T2w share preprocessing (steps 1–2), then diverge: T1w goes through ACPC alignment, cropping, and skull stripping; T2w is rigidly registered into the cropped T1w space and reuses the T1w brain mask. Step 5 normalizes both modalities within the brain mask.
 
 ---
 
@@ -72,8 +78,6 @@ fsleyes render --outfile docs/figures/t2_after_coreg.png \
     ${INT}/${SUBJ}_T2_coreg.nii.gz --cmap blue-lightblue --alpha 50
 ```
 
-</details>
-
 ---
 
 ## Quick Start
@@ -107,14 +111,14 @@ qsub scripts/run_batch.sh
 
 ### Load modules (BU SCC)
 
+The pipeline auto-loads required modules via `utils/load_modules.sh`, so manual loading is optional. To load them yourself:
+
 ```bash
 module load fsl
 module load afni
 module load ants
 module load freesurfer
 ```
-
-Modules are auto-loaded by the pipeline if missing.
 
 ### Verify installation
 
@@ -213,9 +217,10 @@ bash utils/validate_output.sh /path/to/output/1001 1001
 ## Project Structure
 
 ```
-csvd_preprocessing/
+CVSD_MRI_Preprocessing/
 ├── configs/
-│   └── preprocess_config.yaml      # All pipeline parameters
+│   ├── preprocess_config.yaml      # All pipeline parameters
+│   └── paths.yaml                  # SCC-specific tool and data paths
 ├── scripts/
 │   ├── 01_reorient.sh              # Step 1: RAS reorientation
 │   ├── 02_n4_bias_correction.sh    # Step 2: N4 bias correction
@@ -229,10 +234,12 @@ csvd_preprocessing/
 ├── utils/
 │   ├── check_dependencies.sh       # Verify all tools are installed
 │   ├── load_modules.sh             # Auto-load SCC modules
+│   ├── copy_epvs_data.sh           # Stage EPVS sample data into input/
 │   └── validate_output.sh          # QC checks on processed data
-├── subjects.txt                    # Subject IDs (one per line)
 └── README.md
 ```
+
+> Create `subjects.txt` (one subject ID per line) at the repo root before running batch jobs. `scripts/run_batch.sh` reads it and the `-t 1-N` array range must match its line count.
 
 ---
 
@@ -244,8 +251,19 @@ Default batch settings: 1 hour runtime, 8GB memory per core, 4 parallel jobs.
 
 ---
 
+## Tool Citations
+
+If you use this pipeline in published work, please cite the underlying tools:
+
+- **AFNI** — Cox, R. W. (1996). AFNI: Software for analysis and visualization of functional magnetic resonance neuroimages. *Computers and Biomedical Research*, 29(3), 162–173. [Paper](https://doi.org/10.1006/cbmr.1996.0014)
+- **ANTs (N4 Bias Field Correction)** — Tustison, N. J., et al. (2010). N4ITK: Improved N3 Bias Correction. *IEEE Transactions on Medical Imaging*, 29(6), 1310–1320. [Paper](https://doi.org/10.1109/TMI.2010.2046908)
+- **FSL** — Jenkinson, M., Beckmann, C. F., Behrens, T. E. J., Woolrich, M. W., & Smith, S. M. (2012). FSL. *NeuroImage*, 62(2), 782–790. [Paper](https://doi.org/10.1016/j.neuroimage.2011.09.015)
+- **FreeSurfer** — Fischl, B. (2012). FreeSurfer. *NeuroImage*, 62(2), 774–781. [Paper](https://doi.org/10.1016/j.neuroimage.2012.01.021)
+- **SynthStrip** — Hoopes, A., et al. (2022). SynthStrip: Skull-Stripping for Any Brain Image. *NeuroImage*, 260, 119474. [Paper](https://doi.org/10.1016/j.neuroimage.2022.119474) | [Docs](https://surfer.nmr.mgh.harvard.edu/docs/synthstrip/)
+
+---
+
 ## References
 
-- **SynthStrip**: Hoopes et al., "SynthStrip: Skull-Stripping for Any Brain Image," *NeuroImage*, 2022. [Paper](https://doi.org/10.1016/j.neuroimage.2022.119474) | [Docs](https://surfer.nmr.mgh.harvard.edu/docs/synthstrip/)
 - **SHiVAi**: Boutinaud et al., SHiVAi pipeline for cCSVD biomarkers. [GitHub](https://github.com/pboutinaud/SHiVAi)
 - **MICCAI 2024 EPVS Challenge**: Standardized evaluation of PVS segmentation methods. [Paper](https://arxiv.org/abs/2512.18197)
